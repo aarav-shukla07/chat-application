@@ -1,1 +1,58 @@
 @import "tailwindcss";
+
+body {
+  margin: 0;
+  font-family: monospace;
+  background-color: black;
+  overflow: hidden;
+}
+
+.cyberpunk-bg {
+  position: relative;
+  z-index: 1;
+  color: #00ff88;
+}
+
+.neon-text {
+  color: #00ff88;
+  text-shadow: 0 0 10px #00ff88, 0 0 20px #00ff88;
+}
+
+.neon-border {
+  box-shadow: 0 0 10px #00ff88, 0 0 20px #00ff88;
+}
+
+.glass-box {
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  border: 1px solid #00ff88;
+  box-shadow: 0 0 10px #00ff88;
+}
+
+.matrix-animation {
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 255, 136, 0.05) 0px,
+    rgba(0, 255, 136, 0.05) 2px,
+    transparent 2px,
+    transparent 4px
+  );
+  animation: matrix 20s linear infinite;
+  z-index: 0;
+  opacity: 0.15;
+}
+
+@keyframes matrix {
+  0% {
+    background-position-y: 0%;
+  }
+  100% {
+    background-position-y: 100%;
+  }
+}

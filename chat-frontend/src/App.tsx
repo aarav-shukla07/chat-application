@@ -1,162 +1,94 @@
 import React, { useEffect, useRef, useState } from 'react';
+import './App.css';
 
 const App: React.FC = () => {
-  const [roomId, setRoomId] = useState<string | null>(null);
-  const [tempRoomId, setTempRoomId] = useState('');
+  const [socket, setSocket] = useState<WebSocket | null>(null);
+  const [roomId, setRoomId] = useState('');
+  const [joined, setJoined] = useState(false);
+  const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<string[]>([]);
-  const [input, setInput] = useState('');
-  const ws = useRef<WebSocket | null>(null);
+  const chatEndRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    if (!roomId) return;
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
-    ws.current = new WebSocket('ws://localhost:8080');
-
-    ws.current.onopen = () => {
-      ws.current?.send(JSON.stringify({
-        type: 'join',
-        payload: { roomId }
-      }));
+  const joinRoom = () => {
+    const ws = new WebSocket('ws://localhost:8080');
+    ws.onopen = () => {
+      ws.send(JSON.stringify({ type: 'join', payload: { roomId } }));
+      setJoined(true);
+    };
+    ws.onmessage = (event) => {
+      const data = event.data;
+      // Skip echo if already displayed by sender
+      if (!data.startsWith('You:')) {
+        setMessages((prev) => [...prev, data]);
+      }
     };
 
-    ws.current.onmessage = (event) => {
-      setMessages(prev => [...prev, event.data]);
-    };
+    setSocket(ws);
+  };
 
-    return () => {
-      ws.current?.close();
-    };
-  }, [roomId]);
-
-  const handleSend = () => {
-    if (input.trim()) {
-      const message = input.trim();
-      setMessages(prev => [...prev, message]);
-
-      ws.current?.send(JSON.stringify({
-        type: 'chat',
-        payload: { message }
-      }));
-
-      setInput('');
+  const sendMessage = () => {
+    if (message.trim() && socket) {
+      socket.send(JSON.stringify({ type: 'chat', payload: { message } }));
+      setMessage('');
     }
   };
 
-  if (!roomId) {
-    return (
-      <div style={{
-        height: '100vh',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: '#f5f5f5'
-      }}>
-        <div style={{
-          backgroundColor: 'white',
-          padding: '2rem',
-          borderRadius: '10px',
-          boxShadow: '0 0 10px rgba(0,0,0,0.1)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '1rem'
-        }}>
+  return (
+    <div className="cyberpunk-bg min-h-screen flex flex-col items-center justify-center text-green-400 font-mono relative z-10">
+
+      <div className="absolute inset-0 z-0 matrix-animation"></div>
+      <h1 className="text-3xl font-bold mb-6 text-center neon-heading">
+  Welcome to the Cyberpunk Chat Application
+</h1>
+      {!joined ? (
+        <div className="glass-box w-full max-w-sm p-6 rounded-lg shadow-lg z-10">
+          <h2 className="text-2xl font-bold mb-4 text-center neon-text">Enter Room ID</h2>
           <input
-            type="text"
-            placeholder="Enter Room ID"
-            value={tempRoomId}
-            onChange={(e) => setTempRoomId(e.target.value)}
-            style={{
-              padding: '0.5rem 1rem',
-              borderRadius: '8px',
-              border: '1px solid #ccc'
-            }}
+            className="w-full p-2 mb-4 bg-transparent border border-green-400 text-green-300 rounded focus:outline-none neon-border"
+            value={roomId}
+            onChange={(e) => setRoomId(e.target.value)}
+            placeholder="Room ID"
           />
           <button
-            onClick={() => {
-              if (tempRoomId.trim()) setRoomId(tempRoomId.trim());
-            }}
-            style={{
-              padding: '0.5rem 1rem',
-              borderRadius: '8px',
-              backgroundColor: '#007bff',
-              color: 'white',
-              border: 'none',
-              cursor: 'pointer'
-            }}
+            onClick={joinRoom}
+            className="w-full p-2 bg-transparent border border-green-400 text-green-300 rounded neon-border hover:bg-green-500 hover:text-black transition-all duration-300"
           >
             Join Room
           </button>
         </div>
-      </div>
-    );
-  }
-
-  return (
-    <div style={{
-      display: 'flex',
-      justifyContent: 'center',
-      padding: '2rem',
-      backgroundColor: '#f9f9f9',
-      height: '100vh',
-      boxSizing: 'border-box'
-    }}>
-      <div style={{
-        width: '100%',
-        maxWidth: '600px',
-        backgroundColor: '#fff',
-        padding: '1rem',
-        borderRadius: '8px',
-        boxShadow: '0 0 10px rgba(0,0,0,0.1)',
-        display: 'flex',
-        flexDirection: 'column'
-      }}>
-        <div style={{
-          flex: 1,
-          overflowY: 'auto',
-          marginBottom: '1rem',
-          maxHeight: '70vh'
-        }}>
-          {messages.map((msg, i) => (
-            <div key={i} style={{
-              backgroundColor: '#e0e0e0',
-              padding: '0.5rem 1rem',
-              borderRadius: '20px',
-              marginBottom: '0.5rem',
-              alignSelf: 'flex-start',
-              maxWidth: '80%',
-              wordWrap: 'break-word'
-            }}>
-              {msg}
-            </div>
-          ))}
+      ) : (
+        <div className="glass-box w-full max-w-2xl h-[80vh] flex flex-col rounded-lg p-4 shadow-xl z-10">
+          <h1 className="text-xl text-center mb-4 neon-text">Room: {roomId}</h1>
+          <div className="flex-1 overflow-y-auto bg-transparent border border-green-600 rounded p-3 space-y-2">
+            {messages.map((msg, i) => (
+              <div key={i} className="text-green-300 bg-transparent border border-green-500 rounded p-2">
+                {msg}
+              </div>
+            ))}
+            <div ref={chatEndRef} />
+          </div>
+          <div className="mt-3 flex">
+            <input
+              type="text"
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+              placeholder="Type a message..."
+              className="flex-1 p-2 bg-transparent border border-green-400 text-green-300 rounded-l focus:outline-none neon-border"
+            />
+            <button
+              onClick={sendMessage}
+              className="p-2 bg-transparent border border-green-400 text-green-300 rounded-r neon-border hover:bg-green-500 hover:text-black transition-all duration-300"
+            >
+              Send
+            </button>
+          </div>
         </div>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-            placeholder="Type a message..."
-            style={{
-              flex: 1,
-              padding: '0.5rem 1rem',
-              borderRadius: '20px',
-              border: '1px solid #ccc'
-            }}
-          />
-          <button
-            onClick={handleSend}
-            style={{
-              padding: '0.5rem 1rem',
-              borderRadius: '20px',
-              backgroundColor: '#007bff',
-              color: '#fff',
-              border: 'none'
-            }}
-          >
-            Send
-          </button>
-        </div>
-      </div>
+      )}
     </div>
   );
 };
